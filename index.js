@@ -2,22 +2,6 @@ const inquirer = require('inquirer');
 const sequelize = require('./config/connection');
 
 function employeeManager() {
-    console.log(`
-    ***************************************************
-    *                                                 *
-    *  _____                 _                        *
-    * | ____|_ __ ___  _ __ | | ___  _   _  ___  ___  *
-    * |  _| | '_ \` _ \\| '_ \\| |/ _ \\| | | |/ _ \\/ _ \\ *
-    * | |___| | | | | | |_) | | (_) | |_| |  __/  __/ *
-    * |_____|_| |_| |_| .__/|_|\\___/ \\__, |\\___|\\___| *
-    * |  \\/  | __ _ _ |_|  __ _  __ _|___/ _ __       *
-    * | |\\/| |/ _\` | '_ \\ / _\` |/ _\` |/ _ \\ '__|      *
-    * | |  | | (_| | | | | (_| | (_| |  __/ |         *
-    * |_|  |_|\\__,_|_| |_|\\__,_|\__,  |\\___|_|         *
-    *                           |___/                 *
-    *                                                 *
-    ***************************************************
-    `);    
     inquirer.prompt({
         type: "list",
         message: "What would you like to do?",
@@ -25,7 +9,12 @@ function employeeManager() {
         choices: ["View All Departments", "View All Roles", "View All Employees", "Add a Department", "Add a Role", "Add an Employee", "Update an Employee Role", "Quit"]
     }).then((response) => {
         if(response.menuOption === "View All Departments") {
-            console.log(`View All Departments`);
+            sequelize.query(`SELECT * FROM department`, (err, result) => {
+                console.log(`Viewing All Departments`);
+                console.table(result);
+                employeeManager();
+            })
+
             // TODO: Connect database to show a formatted table showing department names and ids
         }
         else if(response.menuOption === "View All Roles") {
@@ -109,4 +98,24 @@ function employeeManager() {
     })
 }
 
-employeeManager();
+function init() {
+    console.log(`
+    ***************************************************
+    *                                                 *
+    *  _____                 _                        *
+    * | ____|_ __ ___  _ __ | | ___  _   _  ___  ___  *
+    * |  _| | '_ \` _ \\| '_ \\| |/ _ \\| | | |/ _ \\/ _ \\ *
+    * | |___| | | | | | |_) | | (_) | |_| |  __/  __/ *
+    * |_____|_| |_| |_| .__/|_|\\___/ \\__, |\\___|\\___| *
+    * |  \\/  | __ _ _ |_|  __ _  __ _|___/ _ __       *
+    * | |\\/| |/ _\` | '_ \\ / _\` |/ _\` |/ _ \\ '__|      *
+    * | |  | | (_| | | | | (_| | (_| |  __/ |         *
+    * |_|  |_|\\__,_|_| |_|\\__,_|\__,  |\\___|_|         *
+    *                           |___/                 *
+    *                                                 *
+    ***************************************************
+    `);
+    employeeManager();
+};
+
+init();
