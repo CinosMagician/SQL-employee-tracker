@@ -37,9 +37,12 @@ function employeeManager() {
             });
         }
         else if(response.menuOption === "View All Employees") {
-            console.log(`View All Employees`);
-            // TODO: Connect database to show a formatted table showing employee data, 
-            // including employee ids, first names, last names, job titles, departments, salaries, and managers that the employees report to
+            pool.connect;
+            pool.query(`SELECT employee.first_name, employee.last_name, role.title, department.name AS department, role.salary as salary, CASE WHEN CONCAT(manager.first_name, ' ', manager.last_name) = ' ' THEN null ELSE CONCAT(manager.first_name, ' ', manager.last_name) END as manager FROM employee JOIN role ON employee.role_id = role.id JOIN department ON role.department_id = department.id LEFT JOIN employee AS manager ON employee.manager_id = manager.id`, (err, result) => {
+                if (err) throw err;
+                console.table(result.rows);
+                employeeManager();
+            });
         }
         else if(response.menuOption === "Add a Department") {
             inquirer.prompt({
