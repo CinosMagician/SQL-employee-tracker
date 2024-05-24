@@ -30,7 +30,7 @@ function employeeManager() {
         }
         else if(response.menuOption === "View All Roles") {
             pool.connect;
-            pool.query(`SELECT role.id, role.title, role.salary, department.name AS department FROM role JOIN department ON role.department_id = department.id`, (err, result) => {
+            pool.query(`SELECT role.id, role.title, role.salary, department.name AS department FROM role JOIN department ON role.department_id = department.id ORDER BY role.id`, (err, result) => {
                 if (err) throw err;
                 console.table(result.rows);
                 employeeManager();
@@ -38,7 +38,7 @@ function employeeManager() {
         }
         else if(response.menuOption === "View All Employees") {
             pool.connect;
-            pool.query(`SELECT employee.first_name, employee.last_name, role.title, department.name AS department, role.salary as salary, CASE WHEN CONCAT(manager.first_name, ' ', manager.last_name) = ' ' THEN null ELSE CONCAT(manager.first_name, ' ', manager.last_name) END as manager FROM employee JOIN role ON employee.role_id = role.id JOIN department ON role.department_id = department.id LEFT JOIN employee AS manager ON employee.manager_id = manager.id`, (err, result) => {
+            pool.query(`SELECT employee.id, employee.first_name, employee.last_name, role.title, department.name AS department, role.salary as salary, CASE WHEN CONCAT(manager.first_name, ' ', manager.last_name) = ' ' THEN null ELSE CONCAT(manager.first_name, ' ', manager.last_name) END as manager FROM employee JOIN role ON employee.role_id = role.id JOIN department ON role.department_id = department.id LEFT JOIN employee AS manager ON employee.manager_id = manager.id ORDER BY employee.id`, (err, result) => {
                 if (err) throw err;
                 console.table(result.rows);
                 employeeManager();
@@ -63,7 +63,7 @@ function employeeManager() {
             let department = [];
             let departmentSelectedId = [];
             let departmentId = 0;
-            pool.query('SELECT * FROM department', (err, result) => {
+            pool.query('SELECT * FROM department ORDER BY id', (err, result) => {
                 if (err) throw err;
                 result.rows.forEach(row => {
                     department.push(row.name);
@@ -130,8 +130,72 @@ function employeeManager() {
                 })
         }
         else if(response.menuOption === "Update an Employee Role") {
-            console.log(`Update an Employee Role`);
-            // TODO: Connect database to allow option to select an employee, update their new role and for this information to be updated in the database 
+            pool.connect();
+
+            let roleSelection = [];
+            let employeeSelection = [];
+            let roleSelectionId = 0;
+            let employeeSelectionId = 0;
+
+            const employeeQuery = () => {
+                return new Promise((resolve, reject) => {
+                    pool.query('SELECT * FROM employee ORDER BY id', (err, result) => {
+                        if (err) reject(err);
+                        result.rows.forEach(row => {
+                            employeeSelection.push(`${row.first_name} ${row.last_name}`);
+                        });
+                        resolve();
+                    });
+                });
+            };
+
+
+            const roleQuery = () => {
+                return new Promise((resolve, reject) => {
+                    pool.query('SELECT * FROM role ORDER BY id', (err, result) => {
+                        if (err) reject(err);
+                        result.rows.forEach(row => {
+                            roleSelection.push(row.title);
+                        });
+                        resolve();
+                    });
+                });
+            };
+
+            Promise.all([employeeQuery(), roleQuery()]).then(() => {
+                inquirer.prompt([
+                    {
+                        type: "list",
+                        message: "Please select the employee you would like to change role:",
+                        name: "selectedEmployee",
+                        choices: employeeSelection
+                    },
+                    {
+                        type: "list",
+                        message: "Please select the role you would like to change for this employee:",
+                        name: "selectedRole",
+                        choices: roleSelection
+                    }
+                    ]).then((response) => {
+                        for (let i = 0; i < roleSelection.length + 1; i++) {
+                            if(response.selectedRole === roleSelection[i]) {
+                                roleSelectionId = i + 1;
+                            }
+                        }
+                        for (let i = 0; i < roleSelection.length + 1; i++) {
+                            if(response.selectedEmployee === employeeSelection[i]) {
+                                employeeSelectionId = i + 1;
+                            }
+                        }
+                        pool.query('UPDATE employee SET role_id = $1 WHERE employee.id = $2', [roleSelectionId, employeeSelectionId], (err, result) => {
+                            console.log(`The employee ${response.selectedEmployee} has been updated with the role of ${response.selectedRole}`);
+                            employeeManager();
+                        })
+
+                    })
+            }).catch(err => {
+                console.error(`Error fetching Data:`, err);
+            })
         }
         else {
             console.log(` <<< `.white + `Thank you for using the Employee Manager!`.green.bold + ` >>>`.white)
