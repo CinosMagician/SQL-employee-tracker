@@ -1,5 +1,6 @@
 const inquirer = require('inquirer');
 const { Pool } = require('pg');
+const colors = require('colors');
 require('dotenv').config();
 
 const pool = new Pool(
@@ -21,15 +22,19 @@ function employeeManager() {
     }).then((response) => {
         if(response.menuOption === "View All Departments") {
             pool.connect;
-            pool.query(`SELECT * FROM department`, (err, result) => {
+            pool.query('SELECT * FROM department', (err, result) => {
                 if (err) throw err;
-                console.table(result.rows);
+                console.table(result.rows)
                 employeeManager();
             });
         }
         else if(response.menuOption === "View All Roles") {
-            console.log(`View All Roles`);
-            // TODO: Connect database to show the job title, role id, the department that role belongs to, and the salary for that role
+            pool.connect;
+            pool.query(`SELECT role.id, role.title, role.salary, department.name AS department FROM role JOIN department ON role.department_id = department.id`, (err, result) => {
+                if (err) throw err;
+                console.table(result.rows);
+                employeeManager();
+            });
         }
         else if(response.menuOption === "View All Employees") {
             console.log(`View All Employees`);
@@ -104,7 +109,7 @@ function employeeManager() {
         }
         else {
             pool.end();
-            console.log(`Thank you for using the Employee Manager!`)
+            console.log(` <<< `.white + `Thank you for using the Employee Manager!`.green.bold + ` >>>`.white)
         }
     })
 }
@@ -125,7 +130,7 @@ function init() {
     *                           |___/                 *
     *                                                 *
     ***************************************************
-    `);
+    `.red.bold);
     employeeManager();
 };
 
