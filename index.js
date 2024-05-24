@@ -50,11 +50,26 @@ function employeeManager() {
                 message: "Please enter the name of the department to add:",
                 name: "newDepartment"
             }).then((response) => {
-                // TODO: Connect the database to seed the new department into the database.
-                console.log(`The department ${response.newDepartment} has been successfully added!`);
+                pool.connect();
+                pool.query('INSERT INTO department (name) VALUES ($1)',[response.newDepartment], (err, result) => {
+                    if (err) throw err;
+                    console.log(`The department ${response.newDepartment} has been successfully added!`);
+                    employeeManager();
+                })
             });
         }
         else if(response.menuOption === "Add a Role") {
+            pool.connect();
+            let department = [];
+            let departmentSelectedId = [];
+            let departmentId = 0;
+            pool.query('SELECT * FROM department', (err, result) => {
+                if (err) throw err;
+                result.rows.forEach(row => {
+                    department.push(row.name);
+                    departmentSelectedId.push(row.id);
+                });
+            });
             inquirer.prompt([
             {
                 type: "input",
@@ -70,12 +85,20 @@ function employeeManager() {
                 type: "list",
                 message: "Please select the department that the role will belong to:",
                 name: "roleDep",
-                choices: ["CONNECT DATABASE FOR CHOICES", "CONNECT DATABASE FOR CHOICES"]
+                choices: department
             }
             ]).then((response) => {
-                // TODO: Connect the database to seed the new role into the database.
-                console.log(`The role ${response.roleName} with the salary amount of ${response.roleSal} in the ${response.roleDep} has been successfully added!`);
-            })
+                for (let i = 0; i < department.length + 1; i++) {
+                    if(response.roleDep === department[i]) {
+                        departmentId = i + 1;
+                    }}
+                    pool.query('INSERT INTO role (title, salary, department_id) VALUES ($1, $2, $3)',[response.roleName, response.roleSal, departmentId], (err, result) => {
+                        if (err) throw err;
+                        console.log(`The role ${response.roleName} with the salary amount of ${response.roleSal} in the ${response.roleDep} has been successfully added!`);
+                        employeeManager();
+                    });
+                }
+            )
         }
         else if(response.menuOption === "Add an Employee") {
             inquirer.prompt([
@@ -111,8 +134,8 @@ function employeeManager() {
             // TODO: Connect database to allow option to select an employee, update their new role and for this information to be updated in the database 
         }
         else {
-            pool.end();
             console.log(` <<< `.white + `Thank you for using the Employee Manager!`.green.bold + ` >>>`.white)
+            pool.end();
         }
     })
 }
