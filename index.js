@@ -1,5 +1,16 @@
 const inquirer = require('inquirer');
-const sequelize = require('./config/connection');
+const { Pool } = require('pg');
+require('dotenv').config();
+
+const pool = new Pool(
+    {
+        user: process.env.DB_USER,
+        password: process.env.DB_PASSWORD,
+        host: 'localhost',
+        database: process.env.DB_NAME
+    },
+      console.log('Connected to the business database!')
+);
 
 function employeeManager() {
     inquirer.prompt({
@@ -9,13 +20,12 @@ function employeeManager() {
         choices: ["View All Departments", "View All Roles", "View All Employees", "Add a Department", "Add a Role", "Add an Employee", "Update an Employee Role", "Quit"]
     }).then((response) => {
         if(response.menuOption === "View All Departments") {
-            sequelize.query(`SELECT * FROM department`, (err, result) => {
-                console.log(`Viewing All Departments`);
-                console.table(result);
+            pool.connect;
+            pool.query(`SELECT * FROM department`, (err, result) => {
+                if (err) throw err;
+                console.table(result.rows);
                 employeeManager();
-            })
-
-            // TODO: Connect database to show a formatted table showing department names and ids
+            });
         }
         else if(response.menuOption === "View All Roles") {
             console.log(`View All Roles`);
@@ -93,6 +103,7 @@ function employeeManager() {
             // TODO: Connect database to allow option to select an employee, update their new role and for this information to be updated in the database 
         }
         else {
+            pool.end();
             console.log(`Thank you for using the Employee Manager!`)
         }
     })
