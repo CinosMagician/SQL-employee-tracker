@@ -1,7 +1,5 @@
 const inquirer = require('inquirer');
 const { Pool } = require('pg');
-// const roleQuery = require('./queries/role');
-// const employeeQuery = require('./queries/employee');
 const colors = require('colors');
 require('dotenv').config();
 
@@ -23,7 +21,7 @@ function employeeManager() {
         choices: ["View All Departments", "View All Roles", "View All Employees", "Add a Department", "Add a Role", "Add an Employee", "Update an Employee Role", "Quit"]
     }).then((response) => {
         if(response.menuOption === "View All Departments") {
-            pool.connect;
+            // pool.connect;
             pool.query('SELECT * FROM department', (err, result) => {
                 if (err) throw err;
                 console.table(result.rows)
@@ -31,7 +29,7 @@ function employeeManager() {
             });
         }
         else if(response.menuOption === "View All Roles") {
-            pool.connect;
+            // pool.connect;
             pool.query(`SELECT role.id, role.title, role.salary, department.name AS department FROM role JOIN department ON role.department_id = department.id ORDER BY role.id`, (err, result) => {
                 if (err) throw err;
                 console.table(result.rows);
@@ -39,7 +37,7 @@ function employeeManager() {
             });
         }
         else if(response.menuOption === "View All Employees") {
-            pool.connect;
+            // pool.connect;
             pool.query(`SELECT employee.id, employee.first_name, employee.last_name, role.title, department.name AS department, role.salary as salary, CASE WHEN CONCAT(manager.first_name, ' ', manager.last_name) = ' ' THEN null ELSE CONCAT(manager.first_name, ' ', manager.last_name) END as manager FROM employee JOIN role ON employee.role_id = role.id JOIN department ON role.department_id = department.id LEFT JOIN employee AS manager ON employee.manager_id = manager.id ORDER BY employee.id`, (err, result) => {
                 if (err) throw err;
                 console.table(result.rows);
@@ -52,7 +50,7 @@ function employeeManager() {
                 message: "Please enter the name of the department to add:",
                 name: "newDepartment"
             }).then((response) => {
-                pool.connect();
+                // pool.connect();
                 pool.query('INSERT INTO department (name) VALUES ($1)',[response.newDepartment], (err) => {
                     if (err) throw err;
                     console.log(`The department ${response.newDepartment} has been successfully added!`);
@@ -61,7 +59,7 @@ function employeeManager() {
             });
         }
         else if(response.menuOption === "Add a Role") {
-            pool.connect();
+            // pool.connect();
             let department = [];
             let departmentSelectedId = [];
             let departmentId = 0;
@@ -103,7 +101,7 @@ function employeeManager() {
             )
         }
         else if(response.menuOption === "Add an Employee") {
-            pool.connect();
+            // pool.connect();
 
             let roleSelection = [];
             let managerSelection = [];
@@ -190,7 +188,6 @@ function employeeManager() {
             })
         }
         else if(response.menuOption === "Update an Employee Role") {
-            pool.connect();
 
             let roleSelection = [];
             let employeeSelection = [];
@@ -237,33 +234,41 @@ function employeeManager() {
                         choices: roleSelection
                     }
                     ]).then((response) => {
+
                         for (let i = 0; i < roleSelection.length + 1; i++) {
                             if(response.selectedRole === roleSelection[i]) {
                                 roleSelectionId = i + 1;
                             }
                         }
+
                         for (let i = 0; i < employeeSelection.length + 1; i++) {
                             if(response.selectedEmployee === employeeSelection[i]) {
                                 employeeSelectionId = i + 1;
                             }
                         }
+
                         pool.query('UPDATE employee SET role_id = $1 WHERE employee.id = $2', [roleSelectionId, employeeSelectionId], () => {
                             console.log(`The employee ${response.selectedEmployee} has been updated with the role of ${response.selectedRole}`);
+                            
                             employeeManager();
+                            
                         })
                     })
             }).catch(err => {
                 console.error(`Error fetching Data:`, err);
             })
         }
-        else {
-            console.log(` <<< `.white + `Thank you for using the Employee Manager!`.green.bold + ` >>>`.white)
+        else if(response.menuOption === "Quit")
+        {
             pool.end();
+            console.log(` <<< `.white + `Thank you for using the Employee Manager!`.green.bold + ` >>>`.white)
+            process.exit(0);
         }
     })
 }
 
 function init() {
+    pool.connect();
     console.log(`
     ***************************************************
     *                                                 *
