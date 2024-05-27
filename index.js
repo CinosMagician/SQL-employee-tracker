@@ -1,5 +1,7 @@
 const inquirer = require('inquirer');
 const { Pool } = require('pg');
+// const roleQuery = require('./queries/role');
+// const employeeQuery = require('./queries/employee');
 const colors = require('colors');
 require('dotenv').config();
 
@@ -51,7 +53,7 @@ function employeeManager() {
                 name: "newDepartment"
             }).then((response) => {
                 pool.connect();
-                pool.query('INSERT INTO department (name) VALUES ($1)',[response.newDepartment], (err, result) => {
+                pool.query('INSERT INTO department (name) VALUES ($1)',[response.newDepartment], (err) => {
                     if (err) throw err;
                     console.log(`The department ${response.newDepartment} has been successfully added!`);
                     employeeManager();
@@ -92,7 +94,7 @@ function employeeManager() {
                     if(response.roleDep === department[i]) {
                         departmentId = i + 1;
                     }}
-                    pool.query('INSERT INTO role (title, salary, department_id) VALUES ($1, $2, $3)',[response.roleName, response.roleSal, departmentId], (err, result) => {
+                    pool.query('INSERT INTO role (title, salary, department_id) VALUES ($1, $2, $3)',[response.roleName, response.roleSal, departmentId], (err) => {
                         if (err) throw err;
                         console.log(`The role ${response.roleName} with the salary amount of ${response.roleSal} in the ${response.roleDep} has been successfully added!`);
                         employeeManager();
@@ -101,7 +103,40 @@ function employeeManager() {
             )
         }
         else if(response.menuOption === "Add an Employee") {
-            inquirer.prompt([
+            pool.connect();
+
+            let roleSelection = [];
+            let managerSelection = [];
+            let roleSelectionId = 0;
+            let managerSelectionId = 0;
+
+            const roleQuery = () => {
+                return new Promise((resolve, reject) => {
+                    pool.query('SELECT * FROM role ORDER BY id', (err, result) => {
+                        if (err) reject(err);
+                        result.rows.forEach(row => {
+                            roleSelection.push(row.title);
+                        });
+                        resolve();
+                    });
+                });
+            };
+            const employeeQuery = () => {
+                return new Promise((resolve, reject) => {
+                    pool.query('SELECT * FROM employee ORDER BY id', (err, result) => {
+                        if (err) reject(err);
+                        result.rows.forEach(row => {
+                            managerSelection.push(`${row.first_name} ${row.last_name}`);
+                        });
+                        managerSelection.push("None");
+                        resolve();
+                    });
+                });
+            };
+            
+            Promise.all([employeeQuery(), roleQuery()]).then(() => {
+                console.log(managerSelection);
+                inquirer.prompt([
                 {
                     type: "input",
                     message: "Please enter the employee's first name:",
@@ -116,18 +151,43 @@ function employeeManager() {
                     type: "list",
                     message: "Please select the role that this employee will belong to:",
                     name: "empRole",
-                    choices: ["CONNECT DATABASE FOR CHOICES", "CONNECT DATABASE FOR CHOICES"]
+                    choices: roleSelection
                 },
                 {
                     type: "list",
                     message: "Please select the manager that this employee will belong to:",
                     name: "empManage",
-                    choices: ["None", "CONNECT DATABASE FOR CHOICES"]
+                    choices: managerSelection
                 }
                 ]).then((response) => {
-                    // TODO: Connect the database to seed the new role into the database.
-                    console.log(`The employee ${response.firstName} ${response.lastName} with the role of ${response.empRole} has been successfully added! Current Manager: ${response.empManage}`);
+                    console.log(response);
+                    if(response.empManage === "None") () => response.empManage = null;
+                    for (let i = 0; i < roleSelection.length + 1; i++) {
+                        if(response.empRole === roleSelection[i]) {
+                            roleSelectionId = i + 1;
+                        }
+                    }
+                    for (let i = 0; i < managerSelection.length + 1; i++) {
+                        if(response.empManage === managerSelection[i]) {
+                            managerSelectionId = i + 1;
+                            console.log(`Here`);
+                            break;
+                        }else if (response.empManage === "None"){
+                            managerSelectionId = null;
+                            console.log(`None selected as manager, setting to null`);
+                            break;
+                        } else {
+                            console.log(`Searching...`);
+                        }
+                    }
+                    console.log(response.firstName, response.lastName, roleSelectionId, managerSelectionId);
+                    pool.query('INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES ($1, $2, $3, $4)',[response.firstName, response.lastName, roleSelectionId, managerSelectionId], (err) => {
+                        if (err) throw err;
+                        console.log(`The employee ${response.firstName} ${response.lastName} with the role of ${response.empRole} with the manager of ${response.empManage} has been successfully added!`);
+                        employeeManager();
+                    });
                 })
+            })
         }
         else if(response.menuOption === "Update an Employee Role") {
             pool.connect();
@@ -182,16 +242,15 @@ function employeeManager() {
                                 roleSelectionId = i + 1;
                             }
                         }
-                        for (let i = 0; i < roleSelection.length + 1; i++) {
+                        for (let i = 0; i < employeeSelection.length + 1; i++) {
                             if(response.selectedEmployee === employeeSelection[i]) {
                                 employeeSelectionId = i + 1;
                             }
                         }
-                        pool.query('UPDATE employee SET role_id = $1 WHERE employee.id = $2', [roleSelectionId, employeeSelectionId], (err, result) => {
+                        pool.query('UPDATE employee SET role_id = $1 WHERE employee.id = $2', [roleSelectionId, employeeSelectionId], () => {
                             console.log(`The employee ${response.selectedEmployee} has been updated with the role of ${response.selectedRole}`);
                             employeeManager();
                         })
-
                     })
             }).catch(err => {
                 console.error(`Error fetching Data:`, err);
