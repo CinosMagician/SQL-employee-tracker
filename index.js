@@ -2,7 +2,7 @@ const inquirer = require('inquirer');
 const { Pool } = require('pg');
 const colors = require('colors');
 require('dotenv').config();
-
+const { employeeQuery, managerQuery, roleQuery, employeeId, managerId, roleId, getDepartments, getRoles, getEmployees } = require(`./quiries`);
 const pool = new Pool(
     {
         user: process.env.DB_USER,
@@ -18,30 +18,36 @@ function employeeManager() {
         type: "list",
         message: "What would you like to do?",
         name: "menuOption",
-        choices: ["View All Departments", "View All Roles", "View All Employees", "Add a Department", "Add a Role", "Add an Employee", "Update an Employee Role", "Quit"]
+        choices: ["View All Departments", "View All Roles", "View All Employees", "Add a Department", "Add a Role", "Add an Employee", "Update an Employee Role", "Update an Assigned Manager", "Quit"]
     }).then((response) => {
         if(response.menuOption === "View All Departments") {
-            // pool.connect;
-            pool.query('SELECT * FROM department', (err, result) => {
-                if (err) throw err;
-                console.table(result.rows)
+            getDepartments()
+            .then(departments => {
+                console.table(departments);
                 employeeManager();
+            })
+            .catch(err => {
+                console.error('Error fetching departments:', err);
             });
         }
         else if(response.menuOption === "View All Roles") {
-            // pool.connect;
-            pool.query(`SELECT role.id, role.title, role.salary, department.name AS department FROM role JOIN department ON role.department_id = department.id ORDER BY role.id`, (err, result) => {
-                if (err) throw err;
-                console.table(result.rows);
+            getRoles()
+            .then(roles => {
+                console.table(roles);
                 employeeManager();
+            })
+            .catch(err => {
+                console.error('Error fetching roles:', err);
             });
         }
         else if(response.menuOption === "View All Employees") {
-            // pool.connect;
-            pool.query(`SELECT employee.id, employee.first_name, employee.last_name, role.title, department.name AS department, role.salary as salary, CASE WHEN CONCAT(manager.first_name, ' ', manager.last_name) = ' ' THEN null ELSE CONCAT(manager.first_name, ' ', manager.last_name) END as manager FROM employee JOIN role ON employee.role_id = role.id JOIN department ON role.department_id = department.id LEFT JOIN employee AS manager ON employee.manager_id = manager.id ORDER BY employee.id`, (err, result) => {
-                if (err) throw err;
-                console.table(result.rows);
+            getEmployees()
+            .then(employees => {
+                console.table(employees);
                 employeeManager();
+            })
+            .catch(err => {
+                console.error('Error fetching employees:', err);
             });
         }
         else if(response.menuOption === "Add a Department") {
@@ -189,51 +195,79 @@ function employeeManager() {
         }
         else if(response.menuOption === "Update an Employee Role") {
 
-            let roleSelection = [];
-            let employeeSelection = [];
-            let roleSelectionId = 0;
-            let employeeSelectionId = 0;
+            const employeeSelection = [];
+            const roleSelection = [];
 
-            const employeeQuery = () => {
-                return new Promise((resolve, reject) => {
-                    pool.query('SELECT * FROM employee ORDER BY id', (err, result) => {
-                        if (err) reject(err);
-                        result.rows.forEach(row => {
-                            employeeSelection.push(`${row.first_name} ${row.last_name}`);
-                        });
-                        resolve();
+            Promise.all([employeeQuery(), roleQuery()])
+                .then(([employees, roles]) => {
+
+                    employees.forEach(employee => {
+                        employeeSelection.push(employee);
                     });
-                });
-            };
-
-
-            const roleQuery = () => {
-                return new Promise((resolve, reject) => {
-                    pool.query('SELECT * FROM role ORDER BY id', (err, result) => {
-                        if (err) reject(err);
-                        result.rows.forEach(row => {
-                            roleSelection.push(row.title);
-                        });
-                        resolve();
-                    });
-                });
-            };
-
-            Promise.all([employeeQuery(), roleQuery()]).then(() => {
-                inquirer.prompt([
-                    {
-                        type: "list",
-                        message: "Please select the employee you would like to change role:",
-                        name: "selectedEmployee",
-                        choices: employeeSelection
-                    },
-                    {
-                        type: "list",
-                        message: "Please select the role you would like to change for this employee:",
-                        name: "selectedRole",
-                        choices: roleSelection
-                    }
+                    roles.forEach(role => {
+                        roleSelection.push(role)
+                    })
+                    
+                    inquirer.prompt([
+                        {
+                            type: "list",
+                            message: "Please select the employee you would like to change role:",
+                            name: "selectedEmployee",
+                            choices: employeeSelection
+                        },
+                        {
+                            type: "list",
+                            message: "Please select the role you would like to change for this employee:",
+                            name: "selectedRole",
+                            choices: roleSelection
+                        }
                     ]).then((response) => {
+
+            // let roleSelection = [];
+            // let employeeSelection = [];
+            // let roleSelectionId = 0;
+            // let employeeSelectionId = 0;
+
+            // const employeeQuery = () => {
+            //     return new Promise((resolve, reject) => {
+            //         pool.query('SELECT * FROM employee ORDER BY id', (err, result) => {
+            //             if (err) reject(err);
+            //             result.rows.forEach(row => {
+            //                 employeeSelection.push(`${row.first_name} ${row.last_name}`);
+            //             });
+            //             resolve();
+            //         });
+            //     });
+            // };
+
+
+            // const roleQuery = () => {
+            //     return new Promise((resolve, reject) => {
+            //         pool.query('SELECT * FROM role ORDER BY id', (err, result) => {
+            //             if (err) reject(err);
+            //             result.rows.forEach(row => {
+            //                 roleSelection.push(row.title);
+            //             });
+            //             resolve();
+            //         });
+            //     });
+            // };
+
+            // Promise.all([employeeQuery(), roleQuery()]).then(() => {
+            //     inquirer.prompt([
+            //         {
+            //             type: "list",
+            //             message: "Please select the employee you would like to change role:",
+            //             name: "selectedEmployee",
+            //             choices: employeeSelection
+            //         },
+            //         {
+            //             type: "list",
+            //             message: "Please select the role you would like to change for this employee:",
+            //             name: "selectedRole",
+            //             choices: roleSelection
+            //         }
+            //         ]).then((response) => {
 
                         for (let i = 0; i < roleSelection.length + 1; i++) {
                             if(response.selectedRole === roleSelection[i]) {
@@ -258,6 +292,42 @@ function employeeManager() {
                 console.error(`Error fetching Data:`, err);
             })
         }
+        else if (response.menuOption === "Update an Assigned Manager") {
+
+            const employeeSelection = [];
+            const managerSelection = [];
+
+            Promise.all([employeeQuery(), managerQuery()])
+                .then(([employees, managers]) => {
+
+                    employees.forEach(employee => {
+                        employeeSelection.push(employee);
+                    });
+                    managers.forEach(manager => {
+                        managerSelection.push(manager);
+                    });
+                    
+                    inquirer.prompt([
+                        {
+                            type: "list",
+                            message: "Please Select an Employee to changed the manager for:",
+                            name: "empSelection",
+                            choices: employeeSelection
+                        },
+                        {
+                            type: "list",
+                            message: "Please Select a new manager to be assigned to this employee:",
+                            name: "manSelection",
+                            choices: managerSelection
+                        },
+                    ]).then((response) => {
+                        employeeManager();
+                    });
+                })
+                .catch(err => {
+                    console.error(`Error fetching employees or managers:`, err);
+                });
+        }
         else if(response.menuOption === "Quit")
         {
             pool.end();
@@ -268,7 +338,7 @@ function employeeManager() {
 }
 
 function init() {
-    pool.connect();
+    // pool.connect();
     console.log(`
     ***************************************************
     *                                                 *
