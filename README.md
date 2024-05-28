@@ -23,11 +23,7 @@ Used to manager employees. Please take a look at this video demonstration for de
 
 ## Live Demo:
 
-
-<iframe src="https://drive.google.com/file/d/1jkwKAuYdqKPns93wHQG9AYYrGTufbw3_/preview" width="640" height="480"></iframe>
-
-
-<a src="https://drive.google.com/file/d/1jkwKAuYdqKPns93wHQG9AYYrGTufbw3_/view">Click Here if it does not load</a>
+[![Watch the video](https://t3.ftcdn.net/jpg/05/80/30/98/360_F_580309859_tMrR3MXpBEyq4YWlBKK6C9oiUcWGakbt.jpg)](https://drive.google.com/file/d/1jkwKAuYdqKPns93wHQG9AYYrGTufbw3_/preview)
 
 
 ## Questions
