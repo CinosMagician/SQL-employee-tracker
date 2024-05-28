@@ -22,7 +22,15 @@ function getDepartments() {
 function getRoles() {
   return new Promise((resolve, reject) => {
     pool.query(
-      "SELECT role.id, role.title, role.salary, department.name AS department FROM role JOIN department ON role.department_id = department.id ORDER BY role.id",
+      `SELECT 
+        role.id, 
+        role.title, 
+        role.salary, 
+        department.name AS department 
+    FROM role 
+        JOIN department ON role.department_id = department.id 
+    ORDER BY 
+        role.id`,
       (err, result) => {
         if (err) {
           reject(err);
@@ -37,7 +45,22 @@ function getRoles() {
 function getEmployees() {
   return new Promise((resolve, reject) => {
     pool.query(
-      `SELECT employee.id, employee.first_name as "first name", employee.last_name as "last name", role.title, department.name AS department, role.salary as salary, CASE WHEN CONCAT(manager.first_name, ' ', manager.last_name) = ' ' THEN null ELSE CONCAT(manager.first_name, ' ', manager.last_name) END as manager FROM employee JOIN role ON employee.role_id = role.id JOIN department ON role.department_id = department.id LEFT JOIN employee AS manager ON employee.manager_id = manager.id ORDER BY employee.id`,
+      `SELECT 
+        employee.id, employee.first_name as "first name", 
+        employee.last_name as "last name", 
+        role.title, department.name AS department, 
+        role.salary as salary, 
+    CASE WHEN 
+        CONCAT(manager.first_name, ' ', manager.last_name) = ' ' 
+        THEN null
+        ELSE CONCAT(manager.first_name, ' ', manager.last_name) 
+        END as manager 
+    FROM employee 
+        JOIN role ON employee.role_id = role.id 
+        JOIN department ON role.department_id = department.id 
+        LEFT JOIN employee AS manager ON employee.manager_id = manager.id 
+    ORDER BY 
+        employee.id`,
       (err, result) => {
         if (err) {
           reject(err);
@@ -47,6 +70,116 @@ function getEmployees() {
       }
     );
   });
+}
+
+function getManagers() {
+  return new Promise((resolve, reject) => {
+    pool.query(
+      `SELECT 
+            employee.id, employee.first_name as "first name", employee.last_name as "last name", role.title, department.name AS department, role.salary as salary
+        FROM 
+            employee 
+            JOIN role ON employee.role_id = role.id 
+            JOIN department ON role.department_id = department.id 
+            LEFT JOIN employee AS manager ON employee.manager_id = manager.id 
+        WHERE 
+            employee.manager_id IS NULL 
+        ORDER BY 
+            employee.id`,
+      (err, result) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(result.rows);
+        }
+      }
+    );
+  });
+}
+
+function getDepartEmployees(selectedDepartment) {
+  return new Promise((resolve, reject) => {
+    pool.query(
+      `SELECT 
+        employee.id, 
+        employee.first_name AS "first name", 
+        employee.last_name AS "last name", 
+        role.title, 
+        department.name AS department, 
+        role.salary AS salary,
+    CASE WHEN 
+        CONCAT(manager.first_name, ' ', manager.last_name) = ' ' 
+        THEN null 
+        ELSE CONCAT(manager.first_name, ' ', manager.last_name) 
+        END as manager
+    FROM 
+        employee 
+        JOIN role ON employee.role_id = role.id 
+        JOIN department ON role.department_id = department.id 
+        LEFT JOIN employee AS manager ON employee.manager_id = manager.id 
+    WHERE 
+        department.name = $1
+    ORDER BY 
+        employee.id;`,
+      [selectedDepartment],
+      (err, result) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(result.rows);
+        }
+      }
+    );
+  });
+}
+
+function getDepartBudget(selectedDepartment) {
+    return new Promise((resolve, reject) => {
+        if(selectedDepartment !== "All") {
+            pool.query(
+                `SELECT 
+                    department.name AS department,
+                    COUNT(employee.id) AS "employee count",
+                    SUM(role.salary) AS "total budget"
+                FROM 
+                    department
+                    JOIN role ON department.id = role.department_id
+                    LEFT JOIN employee ON role.id = employee.role_id
+                WHERE
+                    department.name = $1
+                GROUP BY 
+                    department.name;`,
+                [selectedDepartment],
+                (err, result) => {
+                  if (err) {
+                    reject(err);
+                  } else {
+                    resolve(result.rows);
+                  }
+                }
+            )
+        } else {
+            pool.query(
+                `SELECT 
+                  department.name AS department,
+                  COUNT(employee.id) AS "employee count",
+                  SUM(role.salary) AS "total budget"
+              FROM 
+                  department
+                  JOIN role ON department.id = role.department_id
+                  LEFT JOIN employee ON role.id = employee.role_id
+              GROUP BY 
+                department.name;`,
+                (err, result) => {
+                  if (err) {
+                    reject(err);
+                  } else {
+                    resolve(result.rows);
+                  }
+                }
+            );
+        }
+    });
 }
 
 function addDepartment(newDepartmentName) {
@@ -275,6 +408,9 @@ module.exports = {
   getDepartments,
   getRoles,
   getEmployees,
+  getManagers,
+  getDepartEmployees,
+  getDepartBudget,
   addDepartment,
   addRole,
   addEmployee,
