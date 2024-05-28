@@ -166,7 +166,8 @@ function employeeManager() {
                   employeeManager();
                 })
                 .catch((err) => {
-                  console.error("Error adding department:", err);
+                  console.error("Error adding department, make sure to use unique names to avoid errors:", err);
+                  employeeManager();
                 });
             });
         } else if (response.menuOption === "Add a Role") {
@@ -210,7 +211,8 @@ function employeeManager() {
                       employeeManager();
                     })
                     .catch((err) => {
-                      console.error("Error adding role:", err);
+                      console.error("Error adding role, make sure to use unique role names:", err);
+                      employeeManager();
                     });
                 });
             })
@@ -377,8 +379,29 @@ function employeeManager() {
             .catch((err) => {
               console.error(`Error fetching employees or managers:`, err);
             });
+        } else if (response.menuOption === "Delete a Department") {
+          console.log(`I'm sorry, this feature has not been implimented yet...`);
+          employeeManager();
+        } else if (response.menuOption === "Delete a Role") {
+          console.log(`I'm sorry, this feature has not been implimented yet...`);
+          employeeManager();
+        } else if (response.menuOption === "Delete an Employee") {
+          console.log(`I'm sorry, this feature has not been implimented yet...`);
+          employeeManager();
         } else if (response.menuOption === "Quit") {
           disconnect();
+          console.log(`
+    ************************************************
+    *                                              *
+    *   ____                 _ _                _  *
+    *  / ___| ___   ___   __| | |__  _   _  ___| | *
+    * | |  _ / _ \\ / _ \\ / _\` | '_ \\| | | |/ _ \\ | *
+    * | |_| | (_) | (_) | (_| | |_) | |_| |  __/_| *
+    *  \\____|\\___/ \\___/ \\__,_|_.__/ \\__, |\\___(_) *
+    *                                |___/         *
+    *                                              *
+    ************************************************
+    `.green.bold);
           console.log(
             ` <<< `.white +
               `Thank you for using the Employee Manager!`.green.bold +
