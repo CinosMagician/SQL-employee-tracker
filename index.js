@@ -1,17 +1,24 @@
 const inquirer = require('inquirer');
-const { Pool } = require('pg');
+const { Pool } = require("pg");
 const colors = require('colors');
 require('dotenv').config();
-const { employeeQuery, managerQuery, roleQuery, employeeId, managerId, roleId, getDepartments, getRoles, getEmployees } = require(`./quiries`);
-const pool = new Pool(
-    {
-        user: process.env.DB_USER,
-        password: process.env.DB_PASSWORD,
-        host: 'localhost',
-        database: process.env.DB_NAME
-    },
-      console.log('Connected to the business database!')
-);
+const {
+  employeeQuery,
+  managerQuery,
+  roleQuery,
+  employeeId,
+  managerId,
+  roleId,
+  getDepartments,
+  getRoles,
+  getEmployees,
+  addDepartment,
+  addRole,
+  addEmployee,
+  updateRole,
+  updateManager,
+  disconnect,
+} = require(`./quiries`);
 
 function employeeManager() {
     inquirer.prompt({
@@ -20,183 +27,139 @@ function employeeManager() {
         name: "menuOption",
         choices: ["View All Departments", "View All Roles", "View All Employees", "Add a Department", "Add a Role", "Add an Employee", "Update an Employee Role", "Update an Assigned Manager", "Quit"]
     }).then((response) => {
-        if(response.menuOption === "View All Departments") {
+        if (response.menuOption === "View All Departments") {
             getDepartments()
-            .then(departments => {
-                console.table(departments);
-                employeeManager();
-            })
-            .catch(err => {
-                console.error('Error fetching departments:', err);
-            });
-        }
-        else if(response.menuOption === "View All Roles") {
+                .then(departments => {
+                    console.table(departments);
+                    employeeManager();
+                })
+                .catch(err => {
+                    console.error('Error fetching departments:', err);
+                });
+        } else if (response.menuOption === "View All Roles") {
             getRoles()
-            .then(roles => {
-                console.table(roles);
-                employeeManager();
-            })
-            .catch(err => {
-                console.error('Error fetching roles:', err);
-            });
-        }
-        else if(response.menuOption === "View All Employees") {
+                .then(roles => {
+                    console.table(roles);
+                    employeeManager();
+                })
+                .catch(err => {
+                    console.error('Error fetching roles:', err);
+                });
+        } else if (response.menuOption === "View All Employees") {
             getEmployees()
-            .then(employees => {
-                console.table(employees);
-                employeeManager();
-            })
-            .catch(err => {
-                console.error('Error fetching employees:', err);
-            });
-        }
-        else if(response.menuOption === "Add a Department") {
+                .then(employees => {
+                    console.table(employees);
+                    employeeManager();
+                })
+                .catch(err => {
+                    console.error('Error fetching employees:', err);
+                });
+        } else if (response.menuOption === "Add a Department") {
             inquirer.prompt({
                 type: "input",
                 message: "Please enter the name of the department to add:",
                 name: "newDepartment"
             }).then((response) => {
-                // pool.connect();
-                pool.query('INSERT INTO department (name) VALUES ($1)',[response.newDepartment], (err) => {
-                    if (err) throw err;
-                    console.log(`The department ${response.newDepartment} has been successfully added!`);
-                    employeeManager();
-                })
-            });
-        }
-        else if(response.menuOption === "Add a Role") {
-            // pool.connect();
-            let department = [];
-            let departmentSelectedId = [];
-            let departmentId = 0;
-            pool.query('SELECT * FROM department ORDER BY id', (err, result) => {
-                if (err) throw err;
-                result.rows.forEach(row => {
-                    department.push(row.name);
-                    departmentSelectedId.push(row.id);
-                });
-            });
-            inquirer.prompt([
-            {
-                type: "input",
-                message: "Please enter the name of the new role to add:",
-                name: "roleName"
-            },
-            {
-                type: "input",
-                message: "Please enter the salary amount for the role:",
-                name: "roleSal"
-            },
-            {
-                type: "list",
-                message: "Please select the department that the role will belong to:",
-                name: "roleDep",
-                choices: department
-            }
-            ]).then((response) => {
-                for (let i = 0; i < department.length + 1; i++) {
-                    if(response.roleDep === department[i]) {
-                        departmentId = i + 1;
-                    }}
-                    pool.query('INSERT INTO role (title, salary, department_id) VALUES ($1, $2, $3)',[response.roleName, response.roleSal, departmentId], (err) => {
-                        if (err) throw err;
-                        console.log(`The role ${response.roleName} with the salary amount of ${response.roleSal} in the ${response.roleDep} has been successfully added!`);
+                addDepartment(response.newDepartment)
+                    .then(() => {
+                        console.log(`The department ${response.newDepartment} has been successfully added!`);
                         employeeManager();
+                    })
+                    .catch(err => {
+                        console.error('Error adding department:', err);
                     });
-                }
-            )
-        }
-        else if(response.menuOption === "Add an Employee") {
-            // pool.connect();
+            });
+        } else if (response.menuOption === "Add a Role") {
 
+            getDepartments().then(departments => {
+                    const deparmentSelection = departments.map(department => department.name);
+
+                    inquirer.prompt([{
+                            type: "input",
+                            message: "Please enter the name of the new role to add:",
+                            name: "roleName"
+                        },
+                        {
+                            type: "input",
+                            message: "Please enter the salary amount for the role:",
+                            name: "roleSal"
+                        },
+                        {
+                            type: "list",
+                            message: "Please select the department that the role will belong to:",
+                            name: "roleDep",
+                            choices: deparmentSelection
+                        }
+                    ]).then((response) => {
+                        const selectedDepartment = departments.find(department => department.name === response.roleDep);
+                        const departmentId = selectedDepartment.id;
+
+                        addRole(response.roleName, response.roleSal, departmentId)
+                            .then(() => {
+                                console.log(`The role ${response.roleName} with the salary amount of ${response.roleSal} in the ${response.roleDep} department has been successfully added!`);
+                                employeeManager();
+                            })
+                            .catch(err => {
+                                console.error('Error adding role:', err);
+                            });
+                    });
+                })
+                .catch(err => {
+                    console.error('Error fetching departments:', err);
+                });
+        } else if (response.menuOption === "Add an Employee") {
             let roleSelection = [];
             let managerSelection = [];
-            let roleSelectionId = 0;
-            let managerSelectionId = 0;
 
-            const roleQuery = () => {
-                return new Promise((resolve, reject) => {
-                    pool.query('SELECT * FROM role ORDER BY id', (err, result) => {
-                        if (err) reject(err);
-                        result.rows.forEach(row => {
-                            roleSelection.push(row.title);
-                        });
-                        resolve();
-                    });
-                });
-            };
-            const employeeQuery = () => {
-                return new Promise((resolve, reject) => {
-                    pool.query('SELECT * FROM employee ORDER BY id', (err, result) => {
-                        if (err) reject(err);
-                        result.rows.forEach(row => {
-                            managerSelection.push(`${row.first_name} ${row.last_name}`);
-                        });
-                        managerSelection.push("None");
-                        resolve();
-                    });
-                });
-            };
-            
-            Promise.all([employeeQuery(), roleQuery()]).then(() => {
-                console.log(managerSelection);
-                inquirer.prompt([
-                {
+            Promise.all([managerQuery(), roleQuery()]) .then(([managers, roles]) => {
+
+              managers.forEach(manager => {
+                  managerSelection.push(manager);
+              });
+              roles.forEach(role => {
+                  roleSelection.push(role)
+              })
+              inquirer.prompt([
+                  {
                     type: "input",
                     message: "Please enter the employee's first name:",
-                    name: "firstName"
-                },
-                {
+                    name: "firstName",
+                  },
+                  {
                     type: "input",
                     message: "Please enter the employee's last name:",
-                    name: "lastName"
-                },
-                {
+                    name: "lastName",
+                  },
+                  {
                     type: "list",
                     message: "Please select the role that this employee will belong to:",
                     name: "empRole",
-                    choices: roleSelection
-                },
-                {
+                    choices: roleSelection,
+                  },
+                  {
                     type: "list",
                     message: "Please select the manager that this employee will belong to:",
                     name: "empManage",
-                    choices: managerSelection
-                }
-                ]).then((response) => {
-                    console.log(response);
-                    if(response.empManage === "None") () => response.empManage = null;
-                    for (let i = 0; i < roleSelection.length + 1; i++) {
-                        if(response.empRole === roleSelection[i]) {
-                            roleSelectionId = i + 1;
-                        }
-                    }
-                    for (let i = 0; i < managerSelection.length + 1; i++) {
-                        if(response.empManage === managerSelection[i]) {
-                            managerSelectionId = i + 1;
-                            console.log(`Here`);
-                            break;
-                        }else if (response.empManage === "None"){
-                            managerSelectionId = null;
-                            console.log(`None selected as manager, setting to null`);
-                            break;
-                        } else {
-                            console.log(`Searching...`);
-                        }
-                    }
-                    console.log(response.firstName, response.lastName, roleSelectionId, managerSelectionId);
-                    pool.query('INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES ($1, $2, $3, $4)',[response.firstName, response.lastName, roleSelectionId, managerSelectionId], (err) => {
-                        if (err) throw err;
-                        console.log(`The employee ${response.firstName} ${response.lastName} with the role of ${response.empRole} with the manager of ${response.empManage} has been successfully added!`);
-                        employeeManager();
-                    });
+                    choices: managerSelection,
+                  },
+                ]).then(async (response) => {
+                    let selectedEmployee = (`${response.firstName} ${response.lastName}`);
+                    let selectedManagerId = await managerId(response.empManage);
+                    let selectedRoleId = await roleId(response.empRole)
+                    await addEmployee(selectedEmployee, selectedManagerId, selectedRoleId);
+                    console.log(`The employee ${response.firstName} ${response.lastName} has been added and under the manager of: ${response.empManage}`);
+                    employeeManager();
+                }).catch(err => {
+                    console.error(`Error adding employee:`, err)
                 })
             })
-        }
-        else if(response.menuOption === "Update an Employee Role") {
+            .catch(err => {
+                console.error(`Error fetching roles or managers:`, err);
+            });
+        } else if (response.menuOption === "Update an Employee Role") {
 
-            const employeeSelection = [];
-            const roleSelection = [];
+          const employeeSelection = [];
+          const roleSelection = [];
 
             Promise.all([employeeQuery(), roleQuery()])
                 .then(([employees, roles]) => {
@@ -205,94 +168,37 @@ function employeeManager() {
                         employeeSelection.push(employee);
                     });
                     roles.forEach(role => {
-                        roleSelection.push(role)
-                    })
-                    
+                        roleSelection.push(role);
+                    });
+
                     inquirer.prompt([
-                        {
-                            type: "list",
-                            message: "Please select the employee you would like to change role:",
-                            name: "selectedEmployee",
-                            choices: employeeSelection
-                        },
-                        {
-                            type: "list",
-                            message: "Please select the role you would like to change for this employee:",
-                            name: "selectedRole",
-                            choices: roleSelection
-                        }
-                    ]).then((response) => {
-
-            // let roleSelection = [];
-            // let employeeSelection = [];
-            // let roleSelectionId = 0;
-            // let employeeSelectionId = 0;
-
-            // const employeeQuery = () => {
-            //     return new Promise((resolve, reject) => {
-            //         pool.query('SELECT * FROM employee ORDER BY id', (err, result) => {
-            //             if (err) reject(err);
-            //             result.rows.forEach(row => {
-            //                 employeeSelection.push(`${row.first_name} ${row.last_name}`);
-            //             });
-            //             resolve();
-            //         });
-            //     });
-            // };
-
-
-            // const roleQuery = () => {
-            //     return new Promise((resolve, reject) => {
-            //         pool.query('SELECT * FROM role ORDER BY id', (err, result) => {
-            //             if (err) reject(err);
-            //             result.rows.forEach(row => {
-            //                 roleSelection.push(row.title);
-            //             });
-            //             resolve();
-            //         });
-            //     });
-            // };
-
-            // Promise.all([employeeQuery(), roleQuery()]).then(() => {
-            //     inquirer.prompt([
-            //         {
-            //             type: "list",
-            //             message: "Please select the employee you would like to change role:",
-            //             name: "selectedEmployee",
-            //             choices: employeeSelection
-            //         },
-            //         {
-            //             type: "list",
-            //             message: "Please select the role you would like to change for this employee:",
-            //             name: "selectedRole",
-            //             choices: roleSelection
-            //         }
-            //         ]).then((response) => {
-
-                        for (let i = 0; i < roleSelection.length + 1; i++) {
-                            if(response.selectedRole === roleSelection[i]) {
-                                roleSelectionId = i + 1;
-                            }
-                        }
-
-                        for (let i = 0; i < employeeSelection.length + 1; i++) {
-                            if(response.selectedEmployee === employeeSelection[i]) {
-                                employeeSelectionId = i + 1;
-                            }
-                        }
-
-                        pool.query('UPDATE employee SET role_id = $1 WHERE employee.id = $2', [roleSelectionId, employeeSelectionId], () => {
-                            console.log(`The employee ${response.selectedEmployee} has been updated with the role of ${response.selectedRole}`);
-                            
-                            employeeManager();
-                            
-                        })
+                      {
+                        type: "list",
+                        message: "Please select the employee you would like to change role:",
+                        name: "selectedEmployee",
+                        choices: employeeSelection
+                      },
+                      {
+                        type: "list",
+                        message: "Please select the role you would like to change for this employee:",
+                        name: "selectedRole",
+                        choices: roleSelection
+                      }
+                    ]).then(async (response) => {
+                        let selectedEmployeeId = await employeeId(response.selectedEmployee);
+                        let selectedRoleId = await roleId(response.selectedRole);
+                        await updateRole(selectedEmployeeId, selectedRoleId);
+                        
+                        console.log(`The employee ${response.empSelection} is now under the manager of: ${response.manSelection}`);
+                        employeeManager();
+                    }).catch(err => {
+                        console.error(`Error updating manager:`, err)
                     })
-            }).catch(err => {
-                console.error(`Error fetching Data:`, err);
-            })
-        }
-        else if (response.menuOption === "Update an Assigned Manager") {
+                })
+                .catch(err => {
+                    console.error(`Error fetching employees or managers:`, err);
+                });
+        } else if (response.menuOption === "Update an Assigned Manager") {
 
             const employeeSelection = [];
             const managerSelection = [];
@@ -306,11 +212,10 @@ function employeeManager() {
                     managers.forEach(manager => {
                         managerSelection.push(manager);
                     });
-                    
-                    inquirer.prompt([
-                        {
+
+                    inquirer.prompt([{
                             type: "list",
-                            message: "Please Select an Employee to changed the manager for:",
+                            message: "Please Select an Employee to change the manager for:",
                             name: "empSelection",
                             choices: employeeSelection
                         },
@@ -320,17 +225,22 @@ function employeeManager() {
                             name: "manSelection",
                             choices: managerSelection
                         },
-                    ]).then((response) => {
+                    ]).then(async (response) => {
+                        let selectedEmployeeId = await employeeId(response.empSelection);
+                        let selectedManagerId = await managerId(response.manSelection);
+                        await updateManager(selectedEmployeeId, selectedManagerId);
+
+                        console.log(`The employee ${response.empSelection} is now under the manager of: ${response.manSelection}`);
                         employeeManager();
-                    });
+                    }).catch(err => {
+                        console.error(`Error updating manager:`, err)
+                    })
                 })
                 .catch(err => {
                     console.error(`Error fetching employees or managers:`, err);
                 });
-        }
-        else if(response.menuOption === "Quit")
-        {
-            pool.end();
+        } else if (response.menuOption === "Quit") {
+            disconnect();
             console.log(` <<< `.white + `Thank you for using the Employee Manager!`.green.bold + ` >>>`.white)
             process.exit(0);
         }
@@ -338,7 +248,6 @@ function employeeManager() {
 }
 
 function init() {
-    // pool.connect();
     console.log(`
     ***************************************************
     *                                                 *
